@@ -4,8 +4,6 @@ const { Product, Category, Tag, ProductTag } = require('../../models');
 // The `/api/products` endpoint
 
 // Find all products and its associated category and tag data
-
-// get all products
 router.get('/', (req, res) => {
   Product.findAll({
       include: [{
@@ -24,7 +22,8 @@ router.get('/', (req, res) => {
     })
 });
 
-// Fin one product and its associated category and tag data
+
+// Find one product and its associated category and tag data
 router.get('/:id', (req, res) => {
   Product.findOne({
       where: {
@@ -54,9 +53,12 @@ router.get('/:id', (req, res) => {
     })
 });
 
+
 // Create a new product
+router.post('/', (req, res) => {
 Product.create(req.body)
     .then((product) => {
+      // if there's product tags, we need to create pairings to bulk create in the ProductTag model
       if (req.body.tagIds.length) {
         const productTagIdArr = req.body.tagIds.map((tag_id) => {
           return {
@@ -66,6 +68,7 @@ Product.create(req.body)
         });
         return ProductTag.bulkCreate(productTagIdArr);
       }
+      // if no product tags, just respond
       res.status(200).json(product);
     })
     .then((productTagIds) => res.status(200).json(productTagIds))
@@ -73,6 +76,8 @@ Product.create(req.body)
       console.log(err);
       res.status(400).json(err);
     });
+});
+
 
 // update product
 router.put('/:id', (req, res) => {
@@ -116,8 +121,26 @@ router.put('/:id', (req, res) => {
     });
 });
 
+// Delete product by id value
 router.delete('/:id', (req, res) => {
-  // delete one product by its `id` value
+  Product.destroy({
+      where: {
+        id: req.params.id
+      }
+    })
+    .then(dbProductData => {
+      if (!dbProductData) {
+        res.status(404).json({
+          message: 'No product found with this id!'
+        });
+        return;
+      }
+      res.json(dbProductData);
+    })
+    .catch(err => {
+      console.log(err);
+      res.status(500).json(err);
+    });
 });
 
 module.exports = router;
